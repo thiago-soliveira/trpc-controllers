@@ -1,0 +1,53 @@
+name: Release (npm)
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    environment: main
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Verify version matches tag
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG="${{ github.event.release.tag_name }}"
+          if [ "v$PKG_VERSION" != "$TAG" ]; then
+            echo "Version mismatch: package.json=$PKG_VERSION tag=$TAG"
+            exit 1
+          fi
+
+      - name: Ensure package is public
+        run: |
+          IS_PRIVATE=$(node -p "require('./package.json').private === true")
+          if [ "$IS_PRIVATE" = "true" ]; then
+            echo "package.json is marked private"
+            exit 1
+          fi
+
+      - name: Check dist exists
+        run: test -d dist
+
+      - name: Publish to npm (OIDC prerelease)
+        if: ${{ github.event.release.prerelease }}
+        run: npm publish --provenance --access public --tag next
+
+      - name: Publish to npm (OIDC)
+        if: ${{ !github.event.release.prerelease }}
+        run: npm publish --provenance --access public
