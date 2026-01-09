@@ -1,6 +1,6 @@
 {
   "name": "trpc-controllers",
-  "version": "1.0.9",
+  "version": "1.1.0",
   "description": "Decorators and class-based routing for tRPC v11",
   "keywords": [
     "trpc",
