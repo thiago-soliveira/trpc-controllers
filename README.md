@@ -113,13 +113,49 @@ See the [tests](./tests) directory for more examples and the [examples](./exampl
 
 ## Types package generation
 
-To rebuild a types-only package (like `server-trpc-types`) you can run:
+Use `trpc-controllers types` to publish your server router types as a small npm package that any frontend can import.
 
-```bash
-trpc-controllers types --project ./trpc-types/tsconfig.json
-```
+1. Add a types-only package (e.g. `trpc-types/`) that re-exports your router and has a `tsconfig.json` that emits declarations only:
 
-It runs `tsc -p` and, if available, `tsc-alias` in the provided project.
+   ```json
+   {
+     "extends": "../tsconfig.json",
+     "compilerOptions": {
+       "composite": true,
+       "declaration": true,
+       "declarationMap": true,
+       "emitDeclarationOnly": true,
+       "module": "ESNext",
+       "moduleResolution": "Bundler",
+       "outDir": "dist",
+       "types": []
+     },
+     "include": ["./src/**/*"]
+   }
+   ```
+
+2. From the repo root, run:
+
+   ```bash
+   npx trpc-controllers types --project ./trpc-types/tsconfig.json
+   ```
+
+   This runs `tsc -p` and, if installed, `tsc-alias` to rewrite path aliases (skip with `--no-alias`).
+
+3. Publish the generated package to npm with `types` pointing at the declaration output (e.g. `"types": "dist/index.d.ts"` and `"files": ["dist"]`).
+
+4. In your frontend, install that package and use it for a typed client:
+
+   ```ts
+   import superjson from 'superjson';
+   import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+   import type { AppRouter } from 'server-trpc-types';
+
+   const trpc = createTRPCProxyClient<AppRouter>({
+     transformer: superjson,
+     links: [httpBatchLink({ url: '/trpc' })],
+   });
+   ```
 
 
 ## License

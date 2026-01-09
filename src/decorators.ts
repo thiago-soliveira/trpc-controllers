@@ -3,6 +3,7 @@ import type {
   AnyMiddlewareFunction,
   AnyProcedure,
   TRPCRootObject,
+  TRPCRuntimeConfigOptions,
 } from '@trpc/server';
 import { TRPCError } from '@trpc/server';
 import {
@@ -264,7 +265,7 @@ export function Input() {
 export function makeDecorators<
   TContext extends object,
   TMeta extends object,
-  TOptions extends object,
+  TOptions extends TRPCRuntimeConfigOptions<TContext, TMeta>,
 >(t: TRPCRootObject<TContext, TMeta, TOptions>) {
   (Symbol as any).metadata ??= Symbol('Symbol.metadata');
   const metadataSymbol = ((Symbol as any).metadata ??= Symbol('Symbol.metadata')) as symbol;

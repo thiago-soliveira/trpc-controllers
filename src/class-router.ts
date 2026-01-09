@@ -8,6 +8,7 @@ import type {
   TRPCRouterRecord,
   TRPCSubscriptionProcedure,
   TRPCRootObject,
+  TRPCRuntimeConfigOptions,
 } from '@trpc/server';
 import { readStore, type ClassMeta, type MethodMeta, type ParamMeta } from './meta';
 import type { InferInput, InferOutput } from './types';
@@ -22,7 +23,7 @@ type BuiltRouter<
 type RootTypesOf<
   TContext extends object,
   TMeta extends object,
-  TOptions extends object,
+  TOptions extends TRPCRuntimeConfigOptions<TContext, TMeta>,
 > = TRPCRootObject<TContext, TMeta, TOptions>['_config']['$types'];
 
 type ControllerMethodKeys<TController> = {
@@ -66,6 +67,36 @@ type ControllerRouters<TControllers, TRoot extends AnyTRPCRootTypes> =
     ? Record<string, BuiltRouter<TRoot, ControllerRecord<TControllers[number]>>>
     : { [K in keyof TControllers]: BuiltRouter<TRoot, ControllerRecord<TControllers[K]>> };
 
+export type ClassRouterRootTypes<
+  TContext extends object,
+  TMeta extends object,
+  TOptions extends TRPCRuntimeConfigOptions<TContext, TMeta>,
+> = RootTypesOf<TContext, TMeta, TOptions>;
+
+export type ClassRouter<
+  TContext extends object,
+  TMeta extends object,
+  TOptions extends TRPCRuntimeConfigOptions<TContext, TMeta>,
+  TControllers extends ControllersInput,
+> = BuiltRouter<ClassRouterRootTypes<TContext, TMeta, TOptions>, ControllersRecord<TControllers>>;
+
+export type ClassRouters<
+  TContext extends object,
+  TMeta extends object,
+  TOptions extends TRPCRuntimeConfigOptions<TContext, TMeta>,
+  TControllers extends ControllersInput,
+> = ControllerRouters<TControllers, ClassRouterRootTypes<TContext, TMeta, TOptions>>;
+
+export type CreateClassRouterResult<
+  TContext extends object,
+  TMeta extends object,
+  TOptions extends TRPCRuntimeConfigOptions<TContext, TMeta>,
+  TControllers extends ControllersInput,
+> = {
+  router: ClassRouter<TContext, TMeta, TOptions, TControllers>;
+  routers: ClassRouters<TContext, TMeta, TOptions, TControllers>;
+};
+
 function defaultRouterName(ctorName: string) {
   if (!ctorName) return 'router';
   return ctorName.charAt(0).toLowerCase() + ctorName.slice(1);
@@ -92,7 +123,11 @@ function buildResolver<T extends Record<string, any>>(
   };
 }
 
-function buildProcedure<TContext extends object, TMeta extends object, TOptions extends object>(
+function buildProcedure<
+  TContext extends object,
+  TMeta extends object,
+  TOptions extends TRPCRuntimeConfigOptions<TContext, TMeta>,
+>(
   t: TRPCRootObject<TContext, TMeta, TOptions>,
   instance: Record<string, any>,
   methodName: string,
@@ -121,7 +156,7 @@ function buildProcedure<TContext extends object, TMeta extends object, TOptions 
 function controllerToRouter<
   TContext extends object,
   TMeta extends object,
-  TOptions extends object,
+  TOptions extends TRPCRuntimeConfigOptions<TContext, TMeta>,
   TController extends Record<string, any>,
 >(
   t: TRPCRootObject<TContext, TMeta, TOptions>,
@@ -161,7 +196,7 @@ function controllerToRouter<
 export function createClassRouter<
   TContext extends object,
   TMeta extends object,
-  TOptions extends object,
+  TOptions extends TRPCRuntimeConfigOptions<TContext, TMeta>,
   TControllers extends ControllersInput,
 >({
   t,
@@ -169,16 +204,7 @@ export function createClassRouter<
 }: {
   t: TRPCRootObject<TContext, TMeta, TOptions>;
   controllers: TControllers;
-}): {
-  router: BuiltRouter<
-    RootTypesOf<TContext, TMeta, TOptions>,
-    ControllersRecord<TControllers>
-  >;
-  routers: ControllerRouters<
-    TControllers,
-    RootTypesOf<TContext, TMeta, TOptions>
-  >;
-} {
+}): CreateClassRouterResult<TContext, TMeta, TOptions, TControllers> {
   const routers = {} as ControllerRouters<
     TControllers,
     RootTypesOf<TContext, TMeta, TOptions>
